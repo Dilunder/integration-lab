@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/integrationlab}
+    username: ${DATABASE_USER:integrationlab}
+    password: ${DATABASE_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 256KB
+      max-request-size: 256KB
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+lab:
+  api-key: ${LAB_API_KEY}
+  inbox-token: ${LAB_INBOX_TOKEN}
+  allowed-origins: ${LAB_ALLOWED_ORIGINS:http://demo:8090}

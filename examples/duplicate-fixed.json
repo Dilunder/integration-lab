@@ -1,0 +1,22 @@
+{
+  "name": "Duplicate payment · fixed handler",
+  "target": "http://demo:8090",
+  "steps": [
+    {
+      "path": "/fixed/payment",
+      "body": "{\"paymentId\":\"{{runId}}\"}",
+      "copies": 5,
+      "parallel": true,
+      "delayMs": 0,
+      "expectedStatus": 200,
+      "pointer": "/accepted",
+      "expected": true
+    }
+  ],
+  "probe": {
+    "path": "/fixed/orders/{{runId}}",
+    "pointer": "/count",
+    "expected": 1,
+    "timeoutMs": 3000
+  }
+}
