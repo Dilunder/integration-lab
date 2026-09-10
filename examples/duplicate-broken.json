@@ -1,0 +1,22 @@
+{
+  "name": "Duplicate payment · broken handler",
+  "target": "http://demo:8090",
+  "steps": [
+    {
+      "path": "/broken/payment",
+      "body": "{\"paymentId\":\"{{runId}}\"}",
+      "copies": 5,
+      "parallel": true,
+      "delayMs": 0,
+      "expectedStatus": 200,
+      "pointer": "/accepted",
+      "expected": true
+    }
+  ],
+  "probe": {
+    "path": "/broken/orders/{{runId}}",
+    "pointer": "/count",
+    "expected": 1,
+    "timeoutMs": 1000
+  }
+}
