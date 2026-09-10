@@ -28,7 +28,7 @@ class RunnerTest {
   server.createContext("/large",e->{byte[] b=new byte[70000];e.sendResponseHeaders(200,b.length);e.getResponseBody().write(b);e.close();});
   server.createContext("/redirect",e->{e.getResponseHeaders().add("Location","/pay");e.sendResponseHeaders(302,-1);e.close();});
   server.start();origin="http://127.0.0.1:"+server.getAddress().getPort();
-  var policy=new TargetPolicy(origin);runner=new Runner(mock(Store.class),policy,new ScenarioValidator(policy,mapper),mapper);
+  var policy=new TargetPolicy(origin);runner=new Runner(mock(Store.class),policy,new ScenarioValidator(policy,mapper),mapper,new TargetHeaders("{}",mapper));
  }
  @AfterEach void close(){runner.close();server.stop(0);pool.shutdownNow();}
  @Test void concurrentDuplicatesVerifyBusinessOutcome(){
@@ -41,7 +41,7 @@ class RunnerTest {
   var step=new Step("/pay","{{runId}}",1,false,0,200,null,null);
   Result result=runner.execute(UUID.randomUUID(),new Scenario("Wrong expectation",origin,List.of(step),
    new Probe("/orders","/count",mapper.valueToTree(2),150)));
-  assertEquals("FAILED",result.status());assertTrue(result.probeMessage().contains("timed out"));
+  assertEquals("FAILED",result.status());assertTrue(result.probeMessage().contains("timed out"));assertTrue(result.probeMessage().contains("received 1"));
  }
  @Test void oversizedResponseFailsInsteadOfExhaustingMemory(){
   var step=new Step("/large","{}",1,false,0,200,null,null);

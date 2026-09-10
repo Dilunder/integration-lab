@@ -16,7 +16,7 @@ public class ScenarioValidator {
   int deliveries=0, delays=0;
   for (Step step:s.steps()) {
    if(step==null) throw new IllegalArgumentException("Step cannot be null");
-   policy.resolve(s.target(), step.path().replace("{{runId}}","validation"));
+   if(step.path()==null) throw new IllegalArgumentException("Step path is required"); policy.resolve(s.target(), step.path().replace("{{runId}}","validation"));
    if(step.copies()<1 || step.copies()>10 || step.delayMs()<0 || step.delayMs()>5000)
     throw new IllegalArgumentException("Use 1–10 copies and delay 0–5000 ms");
    if(step.expectedStatus()<100 || step.expectedStatus()>599)
@@ -28,7 +28,7 @@ public class ScenarioValidator {
   if(deliveries>30 || delays>10000) throw new IllegalArgumentException("Maximum 30 deliveries and 10 seconds of delays");
   if(s.probe()!=null) {
    Probe p=s.probe();
-   policy.resolve(s.target(), p.path().replace("{{runId}}","validation"));
+   if(p.path()==null) throw new IllegalArgumentException("Probe path is required"); policy.resolve(s.target(), p.path().replace("{{runId}}","validation"));
    if(p.timeoutMs()<100 || p.timeoutMs()>10000 || p.expected()==null)
     throw new IllegalArgumentException("Probe requires expected value and timeout 100–10000 ms");
    pointer(p.pointer(), p.expected());

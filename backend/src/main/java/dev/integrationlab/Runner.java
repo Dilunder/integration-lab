@@ -15,14 +15,14 @@ public class Runner {
  private final Store store;
  private final TargetPolicy policy;
  private final ScenarioValidator validator;
- private final ObjectMapper mapper;
+ private final ObjectMapper mapper; private final TargetHeaders targetHeaders;
  private final ExecutorService runs=Executors.newFixedThreadPool(2);
  private final ExecutorService deliveries=Executors.newFixedThreadPool(10);
  private final Semaphore capacity=new Semaphore(2);
  private final HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))
     .followRedirects(HttpClient.Redirect.NEVER).build();
- public Runner(Store store,TargetPolicy policy,ScenarioValidator validator,ObjectMapper mapper){
-  this.store=store;this.policy=policy;this.validator=validator;this.mapper=mapper;
+ public Runner(Store store,TargetPolicy policy,ScenarioValidator validator,ObjectMapper mapper,TargetHeaders targetHeaders){
+  this.store=store;this.policy=policy;this.validator=validator;this.mapper=mapper;this.targetHeaders=targetHeaders;
  }
  @PostConstruct void recover(){store.interrupt();}
  @PreDestroy void close(){runs.shutdownNow();deliveries.shutdownNow();client.close();}
@@ -64,9 +64,9 @@ public class Runner {
  private Delivery send(UUID id,String target,Step s,int index,int copy){
   long begin=System.nanoTime();
   try{
-   HttpRequest request=HttpRequest.newBuilder(policy.resolve(target,expand(s.path(),id)))
+   HttpRequest.Builder builder=HttpRequest.newBuilder(policy.resolve(target,expand(s.path(),id)))
     .timeout(Duration.ofSeconds(3)).header("Content-Type","application/json")
-    .POST(HttpRequest.BodyPublishers.ofString(expand(s.body(),id))).build();
+    .POST(HttpRequest.BodyPublishers.ofString(expand(s.body(),id))); targetHeaders.apply(target,builder); HttpRequest request=builder.build();
    var response=fetch(request);
    String mismatch=assertion(response.body(),s.pointer(),s.expected());
    boolean pass=response.status()==s.expectedStatus() && mismatch==null;
@@ -79,16 +79,16 @@ public class Runner {
   }
  }
  private String probe(UUID id,String target,Probe p)throws Exception{
-  long deadline=System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(p.timeoutMs());String last="No response";
+  long deadline=System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(p.timeoutMs());String last="No response";boolean receivedResponse=false;
   do{
    long remaining=Math.max(1,TimeUnit.NANOSECONDS.toMillis(deadline-System.nanoTime()));
    try{
-    var request=HttpRequest.newBuilder(policy.resolve(target,expand(p.path(),id)))
-     .timeout(Duration.ofMillis(Math.min(3000,remaining))).GET().build();
+    var builder=HttpRequest.newBuilder(policy.resolve(target,expand(p.path(),id)))
+     .timeout(Duration.ofMillis(Math.min(3000,remaining))).GET(); targetHeaders.apply(target,builder); var request=builder.build();
     var response=fetch(request);
-    last=response.status()!=200?"Expected HTTP 200, received "+response.status():assertion(response.body(),p.pointer(),p.expected());
+    receivedResponse=true; last=response.status()!=200?"Expected HTTP 200, received "+response.status():assertion(response.body(),p.pointer(),p.expected());
     if(last==null)return "Business assertion passed";
-   }catch(InterruptedException e){throw e;}catch(Exception e){last=e.getClass().getSimpleName();}
+   }catch(InterruptedException e){throw e;}catch(Exception e){if(!receivedResponse)last=e.getClass().getSimpleName();}
    remaining=TimeUnit.NANOSECONDS.toMillis(deadline-System.nanoTime());
    if(remaining>0)Thread.sleep(Math.min(200,remaining));
   }while(System.nanoTime()<deadline);
